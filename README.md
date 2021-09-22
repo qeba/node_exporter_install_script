@@ -8,4 +8,4 @@ Run the install.sh as root user and you good to go!.
 - Current version: v1.1.2
 
 ## How it works?
-- This script will conver the NodeExporter to script and run basic testing. 
+- This script will convert the NodeExporter to script and run basic testing. 
