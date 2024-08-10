@@ -4,7 +4,15 @@
 # Wrote by qeba-
 #
 # First script is written on 1/6/2021
+# update script on 10/08/2024 - to download latest version instead of fix version
+#
 # Usage: bash install.sh
+
+# Fetch the latest release version from the GitHub API
+latest_version=$(curl -s https://api.github.com/repos/prometheus/node_exporter/releases/latest | grep "tag_name" | cut -d'"' -f4)
+
+# Construct the download URL for the Node Exporter binary
+download_url="https://github.com/prometheus/node_exporter/releases/download/${latest_version}/node_exporter-${latest_version}.linux-amd64.tar.gz"
 
 echo "----------------------------------------------------------------------------------"
 echo "This script is used to setup NodeExporter Automatically on Linux OS"
@@ -13,33 +21,33 @@ read -p "Press Enter key when you ready!/  "
 
 
 checkFolder() {
-if [ -d "./tempInstall" ] 
-    then
-        printf  "\nDirectory Alerady exists, will delete the directory first." 
-        printf  "\nMake sure you backup if there related data in ./tempInstall folder," 
-        printf  "\n"
-        read -p "Press Enter to continue delete or ctrl + c to cancel!.   "
-        rm -rf ./tempInstall
-        sleep 1
-        mkdir tempInstall
-        cd ./tempInstall
-    else 
-    mkdir tempInstall 
-    cd ./tempInstall
-fi
+    if [ -d "./tempInstall" ] 
+        then
+            printf  "\nDirectory Alerady exists, will delete the directory first." 
+            printf  "\nMake sure you backup if there related data in ./tempInstall folder," 
+            printf  "\n"
+            read -p "Press Enter to continue delete or ctrl + c to cancel!.   "
+            rm -rf ./tempInstall
+            sleep 1
+            mkdir tempInstall
+            cd ./tempInstall
+        else 
+            mkdir tempInstall 
+            cd ./tempInstall
+    fi
 }
 
 #make folder to downlaod
 checkFolder
 #begin to install. 
 echo  "Download the NodeExporter...." 
-wget https://github.com/prometheus/node_exporter/releases/download/v1.1.2/node_exporter-1.1.2.linux-amd64.tar.gz
+wget ${download_url}
 sleep 1
 echo  "Extract the files..." 
 printf  "\n"
-tar -xvf node_exporter-1.1.2.linux-amd64.tar.gz
+tar -xvf node_exporter-${latest_version}.linux-amd64.tar.gz
 sleep 2
-sudo mv ./node_exporter-*/node_exporter /usr/local/bin/
+sudo mv ./node_exporter-${latest_version}/node_exporter /usr/local/bin/
 sleep 2
 echo  "Create user for Node Exporter......"
 printf  "\n"
