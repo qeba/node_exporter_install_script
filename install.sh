@@ -12,6 +12,12 @@
 latest_version=$(curl -s https://api.github.com/repos/prometheus/node_exporter/releases/latest | grep "tag_name" | cut -d'"' -f4)
 
 # Construct the download URL for the Node Exporter binary
+download_url="https://github.com/prometheus/node_exporter/releases/download/${latest_version}/node_exporter-${latest_version}.linux-amd64.tar.gz"
+
+# Remove the leading "v" from the version number
+latest_version=${latest_version:1}
+
+# Reconstruct the download URL without the leading "v"
 download_url="https://github.com/prometheus/node_exporter/releases/download/v${latest_version}/node_exporter-${latest_version}.linux-amd64.tar.gz"
 
 echo "----------------------------------------------------------------------------------"
