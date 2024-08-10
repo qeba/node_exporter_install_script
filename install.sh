@@ -108,7 +108,9 @@ echo  "Enable the exporter running automatically after reboot...."
 sudo systemctl enable node_exporter
 clear
 
-ipAddress=$(hostname -i)
+#show only public IP not all IPs..
+ipAddress=$(curl -s https://api.ipify.org)
+
 
 echo " Everthing complete!.. Time to configure prometheus with the node details..."
 echo "----------------------------------------------------------------------------------"
