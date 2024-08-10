@@ -2,6 +2,11 @@
 
 ## How to use?
 Run the install.sh as root user and you good to go!. 
+Run the following command on server directly to install it:
+```
+curl -s https://raw.githubusercontent.com/qeba/node_exporter_install_script/master/install.sh | bash
+```
+
 
 ## NodeExporter Details?.
 - Port used is: 9100
