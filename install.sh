@@ -45,6 +45,7 @@ checkFolder() {
 
 #make folder to downlaod
 checkFolder
+
 #begin to install. 
 echo  "Download the NodeExporter...." 
 wget ${download_url}
@@ -53,7 +54,7 @@ echo  "Extract the files..."
 printf  "\n"
 tar -xvf node_exporter-${latest_version}.linux-amd64.tar.gz
 sleep 2
-sudo mv ./node_exporter-${latest_version}/node_exporter /usr/local/bin/
+sudo mv ./node_exporter-${latest_version}.linux-amd64/node_exporter /usr/local/bin/
 sleep 2
 echo  "Create user for Node Exporter......"
 printf  "\n"
