@@ -1,74 +1,98 @@
 #!/bin/bash
-# This script intended to be use to install NodeExporter for prometheus
+# This script installs NodeExporter for prometheus on various Linux distributions
 #
-# Wrote by qeba-
-#
-# First script is written on 1/6/2021
-# update script on 10/08/2024 - to download latest version instead of fix version
+# Original author: qeba-
+# First script written on 1/6/2021
+# Updated on 10/08/2024 - to download latest version instead of fixed version
+# Updated on 11/01/2025 - added multi-distribution support
 #
 # Usage: bash install.sh
 
-# Fetch the latest release version from the GitHub API
-latest_version=$(curl -s https://api.github.com/repos/prometheus/node_exporter/releases/latest | grep "tag_name" | cut -d'"' -f4)
-
-# Construct the download URL for the Node Exporter binary
-download_url="https://github.com/prometheus/node_exporter/releases/download/${latest_version}/node_exporter-${latest_version}.linux-amd64.tar.gz"
-
-# Remove the leading "v" from the version number
-latest_version=${latest_version:1}
-
-# Reconstruct the download URL without the leading "v"
-download_url="https://github.com/prometheus/node_exporter/releases/download/v${latest_version}/node_exporter-${latest_version}.linux-amd64.tar.gz"
-
-echo "----------------------------------------------------------------------------------"
-echo "This script is used to setup NodeExporter Automatically on Linux OS"
-echo "----------------------------------------------------------------------------------"
-read -p "Press Enter key when you ready!/  "
-
-
-checkFolder() {
-    if [ -d "./tempInstall" ] 
-        then
-            printf  "\nDirectory Alerady exists, will delete the directory first." 
-            printf  "\nMake sure you backup if there related data in ./tempInstall folder," 
-            printf  "\n"
-            read -p "Press Enter to continue delete or ctrl + c to cancel!.   "
-            rm -rf ./tempInstall
-            sleep 1
-            mkdir tempInstall
-            cd ./tempInstall
-        else 
-            mkdir tempInstall 
-            cd ./tempInstall
+# Function to detect the Linux distribution
+detect_distribution() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        DISTRO=$ID
+        VERSION=$VERSION_ID
+    else
+        echo "Cannot detect Linux distribution. Exiting..."
+        exit 1
     fi
 }
 
-#make folder to downlaod
-checkFolder
+# Function to check if running as root
+check_root() {
+    if [ "$EUID" -ne 0 ]; then
+        echo "Please run this script as root or with sudo"
+        exit 1
+    fi
+}
 
-#begin to install. 
-echo  "Download the NodeExporter...." 
-wget ${download_url}
-sleep 1
-echo  "Extract the files..." 
-printf  "\n"
-tar -xvf node_exporter-${latest_version}.linux-amd64.tar.gz
-sleep 2
-sudo mv ./node_exporter-${latest_version}.linux-amd64/node_exporter /usr/local/bin/
-sleep 2
-echo  "Create user for Node Exporter......"
-printf  "\n"
-sudo useradd -rs /bin/false node_exporter
-echo  "Clear installation files...."
-printf  "\n"
-cd ..
-rm -rf ./tempInstall
-sleep 2
-echo  "Waiting for something....."
-printf  "\n"
-echo  "Begin to setup services...."
-sleep 1
-cat > /etc/systemd/system/node_exporter.service <<EOL
+# Function to install required packages
+install_prerequisites() {
+    echo "Installing prerequisites..."
+    case $DISTRO in
+        "ubuntu"|"debian")
+            apt-get update
+            apt-get install -y wget curl
+            ;;
+        "centos"|"rhel"|"fedora"|"rocky"|"almalinux")
+            yum install -y wget curl
+            ;;
+        *)
+            echo "Unsupported distribution: $DISTRO"
+            exit 1
+            ;;
+    esac
+}
+
+# Fetch the latest release version from the GitHub API
+get_latest_version() {
+    latest_version=$(curl -s https://api.github.com/repos/prometheus/node_exporter/releases/latest | grep "tag_name" | cut -d'"' -f4)
+    # Remove the leading "v" from the version number
+    latest_version=${latest_version:1}
+    download_url="https://github.com/prometheus/node_exporter/releases/download/v${latest_version}/node_exporter-${latest_version}.linux-amd64.tar.gz"
+}
+
+# Function to create system user based on distribution
+create_user() {
+    echo "Creating node_exporter user..."
+    case $DISTRO in
+        "ubuntu"|"debian")
+            useradd -rs /bin/false node_exporter 2>/dev/null || true
+            ;;
+        "centos"|"rhel"|"fedora"|"rocky"|"almalinux")
+            useradd -rs /bin/false node_exporter 2>/dev/null || true
+            ;;
+    esac
+}
+
+# Main installation function
+install_node_exporter() {
+    local temp_dir="tempInstall"
+    
+    # Create and enter temp directory
+    rm -rf ./$temp_dir 2>/dev/null
+    mkdir $temp_dir
+    cd $temp_dir
+
+    echo "Downloading Node Exporter..."
+    wget "$download_url"
+    
+    echo "Extracting files..."
+    tar -xvf node_exporter-${latest_version}.linux-amd64.tar.gz
+    
+    echo "Installing Node Exporter..."
+    mv ./node_exporter-${latest_version}.linux-amd64/node_exporter /usr/local/bin/
+    
+    cd ..
+    rm -rf ./$temp_dir
+}
+
+# Function to create systemd service
+create_service() {
+    echo "Creating systemd service..."
+    cat > /etc/systemd/system/node_exporter.service <<EOL
 [Unit]
 Description=Node Exporter
 After=network.target
@@ -83,39 +107,54 @@ ExecStart=/usr/local/bin/node_exporter
 WantedBy=multi-user.target
 EOL
 
-sleep 2
-printf  "\n"
-echo  "Configuration files added.. setup completed!...."
-clear
-echo "----------------------------------------------------------------------------------"
-echo " Configure service to run and test the services.... "
-echo "----------------------------------------------------------------------------------"
-sudo systemctl daemon-reload
-sleep 2
-printf  "\n"
-echo  "Try to start node_exporter services..."
-sudo systemctl start node_exporter
-sleep 2
-sudo systemctl status node_exporter
-sleep 1
-printf  "\n"
-printf  "\n"
-echo -e "\e[1;32m √ Please ensure the status is active before continue.... \e[0m"
-sleep 1
-read -p "Do you see the service status is active?. if Yes enter to continue..  "
-printf  "\n"
-echo  "Enable the exporter running automatically after reboot...."
-sudo systemctl enable node_exporter
-clear
+    systemctl daemon-reload
+    systemctl start node_exporter
+    systemctl enable node_exporter
+}
 
-#show only public IP not all IPs..
+# Main execution
+echo "----------------------------------------------------------------------------------"
+echo "Node Exporter Installation Script - Multi-Distribution Support"
+echo "----------------------------------------------------------------------------------"
+
+# Check if running as root
+check_root
+
+# Detect distribution
+detect_distribution
+echo "Detected Linux distribution: $DISTRO $VERSION"
+
+# Confirm installation
+read -p "Press Enter to continue with installation or Ctrl+C to cancel..."
+
+# Install prerequisites
+install_prerequisites
+
+# Get latest version
+get_latest_version
+
+# Create user
+create_user
+
+# Install Node Exporter
+install_node_exporter
+
+# Create and start service
+create_service
+
+# Check service status
+echo "Checking service status..."
+systemctl status node_exporter
+
+# Get public IP
 ipAddress=$(curl -s https://api.ipify.org)
 
-
-echo " Everthing complete!.. Time to configure prometheus with the node details..."
+clear
+echo "Installation completed successfully!"
 echo "----------------------------------------------------------------------------------"
+echo "Prometheus configuration:"
 echo "- job_name: 'node_exporter_metrics'"
 echo "  scrape_interval: 5s"
 echo "  static_configs:"
-echo "     - targets: ['$ipAddress:9100'] "
+echo "     - targets: ['$ipAddress:9100']"
 echo "----------------------------------------------------------------------------------"
